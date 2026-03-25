@@ -1,0 +1,29 @@
+# Virtual Environment
+ragEnv/
+
+# Vector database (can be regenerated)
+chroma_db/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.$py.class
+*.so
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+
+OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test Documents 
+documents/
+
