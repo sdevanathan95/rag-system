@@ -50,8 +50,8 @@ def load_documents(directory: str) -> list:
 def chunk_documents(documents: list) -> list:
     """Split documents into smaller chunks"""
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, 
-        chunk_overlap=200,
+        chunk_size=700, 
+        chunk_overlap=120,
         length_function=len,
         separators=["\n\n", "\n", ". ", " ", ""]
     )
@@ -65,7 +65,7 @@ def create_vector_store(chunks: list) -> Chroma:
     print("Creating embeddings (this may take a while)...")
 
     embeddings = OllamaEmbeddings(
-        model="nomic-embed-text",
+        model="nomic-embed-text:v1.5",
         base_url=OLLAMA_URL
     )
 

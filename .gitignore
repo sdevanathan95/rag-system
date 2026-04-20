@@ -3,6 +3,7 @@ ragEnv/
 
 # Vector database (can be regenerated)
 chroma_db/
+storage/
 
 # Python cache
 __pycache__/

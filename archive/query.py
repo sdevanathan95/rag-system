@@ -29,14 +29,14 @@ def load_vector_store() -> Chroma:
 def create_qa_chain(vectorstore: Chroma):
     """Create the RAG chain."""
     llm = OllamaLLM(
-        model="llama3.2",
+        model="gemma3:4b",
         base_url=OLLAMA_URL,
-        temperature=0.3
+        temperature=0.1
     )
 
     retriever = vectorstore.as_retriever(
-        search_type="similarity",
-        search_kwargs={"k":4}
+        search_type="mmr",
+        search_kwargs={"k":6, "fetch_k": 20}
     )
 
     template = """You are a helpful assistant answering questions based on the provided context.
