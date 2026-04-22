@@ -14,8 +14,7 @@ class GenerationPipeline:
     def __init__(self):
         self.llm = ChatOllama(model=LLM_MODEL, base_url=OLLAMA_BASE_URL, temperature=0.1)
         embedding = OllamaEmbeddings(model=EMBEDDING_MODEL, base_url=OLLAMA_BASE_URL)
-        vectorstore = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding)
-        self.retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 6, "fetch_k": 20})
+        self.vectorstore = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding)
         self.rephrase_prompt = ChatPromptTemplate.from_template(
             "Generate 3 different search queries for this question, one per line, no numbering:\n{question}"
         )
@@ -31,15 +30,23 @@ class GenerationPipeline:
 
         Answer:""")
 
-    def query_rag(self, question: str):
+    def query_rag(self, question: str, selected_docs: list = []):
         """Query the RAG system - returns (answer, source_documents)"""
+        search_kwargs = {"k": 6, "fetch_k": 20}
+        if selected_docs:
+            if len(selected_docs) == 1:
+                search_kwargs["filter"] = {"source": selected_docs[0]}
+            else:
+                search_kwargs["filter"] = {"source": {"$in": selected_docs}}
+        retriever = self.vectorstore.as_retriever(search_type="mmr", search_kwargs=search_kwargs)
+
         queries_text = (self.rephrase_prompt | self.llm | StrOutputParser()).invoke({"question": question})
         alt_queries = [q.strip() for q in queries_text.strip().split("\n") if q.strip()]
 
-        all_docs = self.retriever.invoke(question)
+        all_docs = retriever.invoke(question)
         seen = {d.page_content for d in all_docs}
         for q in alt_queries[:3]:
-            for doc in self.retriever.invoke(q):
+            for doc in retriever.invoke(q):
                 if doc.page_content not in seen:
                     seen.add(doc.page_content)
                     all_docs.append(doc)

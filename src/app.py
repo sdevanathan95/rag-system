@@ -69,6 +69,15 @@ with st.sidebar:
     else:
         st.info("No docs indexed yet")
 
+    st.divider()
+    st.subheader("Query Scope")
+    doc_names = list(indexed_documents.keys())
+    selected_docs = st.multiselect(
+        "Search within (leave empty for all)",
+        options=doc_names,
+        default=[]
+    )
+
     # File upload section
     st.subheader("Upload Documents")
     uploaded_files = st.file_uploader(
@@ -155,7 +164,7 @@ if prompt := st.chat_input("Ask a question..."):
         # Get RAG response
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-                answer, sources = generationPipeline.query_rag(prompt)
+                answer, sources = generationPipeline.query_rag(prompt, selected_docs)
                 st.write(answer)
                 
                 # Show sources
