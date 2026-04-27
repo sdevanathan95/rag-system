@@ -1,6 +1,7 @@
 chromadb
 docling
 langchain
+langchain-chroma
 langchain-community
 langchain-core
 langchain-docling

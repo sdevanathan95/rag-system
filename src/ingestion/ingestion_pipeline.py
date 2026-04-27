@@ -9,10 +9,10 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from langchain_ollama import OllamaEmbeddings
-from langchain_community.vectorstores import Chroma
-from langchain_community.vectorstores.utils import filter_complex_metadata
+from langchain_chroma import Chroma
 from langchain_docling import DoclingLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_docling.loader import ExportType
+from docling_core.transforms.chunker import HierarchicalChunker
 
 from config.config import OLLAMA_BASE_URL, EMBEDDING_MODEL, CHROMA_PATH
 
@@ -21,8 +21,9 @@ class IngestionPipeline:
 
     def __init__(self):
         self.embeddings = OllamaEmbeddings(model=EMBEDDING_MODEL, base_url=OLLAMA_BASE_URL)
-        self.splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=120)
+        self.chunker = HierarchicalChunker()
         pipeline_options = PdfPipelineOptions(allow_external_plugins=True)
+        pipeline_options.do_ocr = True
         self.converter = DocumentConverter(
             format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
         )
@@ -37,24 +38,30 @@ class IngestionPipeline:
 
         try:
             if suffix in [".pdf", ".txt", ".md", ".docx"]:
-                loader = DoclingLoader(tmp_path, converter=self.converter)
+                loader = DoclingLoader(
+                    tmp_path,
+                    converter=self.converter,
+                    export_type=ExportType.DOC_CHUNKS,
+                    chunker=self.chunker
+                )
             else:
                 raise ValueError(f"Unsupported file type: {suffix}")
 
-            documents = loader.load()
+            chunks = loader.load()
 
-            for doc in documents:
-                doc.metadata["source"] = uploaded_file.name
-
-            chunks = self.splitter.split_documents(documents)
-            # Filtering complex metadata that ChromaDB cannot manage
-            # TODO: change DB and include complex metadata though it had less significance.
-            chunks = filter_complex_metadata(chunks)
+            for chunk in chunks:
+                chunk.metadata["source"] = uploaded_file.name
+                # ChromaDB only accepts str, int, float, bool, list, None
+                chunk.metadata = {
+                    k: v for k, v in chunk.metadata.items()
+                    if isinstance(v, (str, int, float, bool, list, type(None)))
+                }
 
             if os.path.exists(CHROMA_PATH):
                 vectorstore = Chroma(persist_directory=CHROMA_PATH, embedding_function=self.embeddings)
                 vectorstore.add_documents(chunks)
             else:
+                os.makedirs(CHROMA_PATH, exist_ok=True)
                 Chroma.from_documents(
                     documents=chunks,
                     embedding=self.embeddings,

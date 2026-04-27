@@ -5,7 +5,7 @@ import requests
 import os
 
 from langchain_ollama import OllamaEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 from config.config import OLLAMA_BASE_URL, EMBEDDING_MODEL, CHROMA_PATH
 
